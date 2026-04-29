@@ -15,8 +15,6 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const keyPreview = process.env.ANTHROPIC_API_KEY;
-console.log(`API key loaded — length: ${keyPreview.length}, starts: ${keyPreview.slice(0,10)}, ends: ${keyPreview.slice(-6)}`);
 
 app.use(cors());
 app.use(express.json());
