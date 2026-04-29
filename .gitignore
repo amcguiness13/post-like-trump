@@ -1,0 +1,4 @@
+node_modules/
+.env
+trump_posts.db
+scripts/.import-progress
