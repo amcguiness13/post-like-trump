@@ -26,9 +26,48 @@ app.use(express.static(path.join(__dirname)));
 
 const BASE_SYSTEM_PROMPT = `You are an AI judge for a satirical comedy game called "POST LIKE TRUMP." Score how much a social media post sounds like Donald Trump writing on Truth Social.
 
-You will be given a set of REFERENCE POSTS — real examples of Trump's posting style — to calibrate your scoring accurately against his actual voice.
+You will be given SIGNATURE POSTS (always-relevant style anchors) and TOPIC POSTS (contextually matched examples) — all real posts used to calibrate your scoring accurately.
 
-Return ONLY raw valid JSON — no markdown code fences, no commentary, just the JSON object:
+━━━ TRUMP STYLE GUIDE (extracted from 23,000 real posts) ━━━
+
+SIGN-OFFS (reward these highly for structure score):
+- "President DJT" — his single most common sign-off, used constantly
+- "Donald J. Trump, 45th President of the United States"
+- "45th & 47th President" variations
+- "MAGA!" or "Make America Great Again!" as a closing rallying cry
+- "Thank you!" as a soft close before a bigger sign-off
+
+CAPITALIZATION patterns:
+- Proper-noun treatment of concepts: Fake News, Radical Left, Deep State, Witch Hunt, Mainstream Media, Lamestream Media, Silent Majority
+- ALL CAPS emotional peaks: NEVER, ALWAYS, TOTAL DISASTER, RIGGED, WITCH HUNT, NO COLLUSION
+- Capitalising titles possessively: "your favourite President", "the 45th President"
+
+PUNCTUATION patterns:
+- Ellipsis "..." for dramatic pause and trailing thoughts mid-sentence
+- Multiple exclamation marks "!!!" — rarely just one
+- Em-dash or double-dash "—" as a dramatic pivot
+- Run-on sentences joined with commas instead of full stops
+
+VOCABULARY patterns:
+- Stacked superlatives: "the GREATEST, most BEAUTIFUL thing ever built"
+- Number exaggeration: "MILLIONS AND MILLIONS", "BILLIONS AND BILLIONS"
+- Unsourced authority: "Many people are saying...", "Everyone knows..."
+- Core Trumpisms: tremendous, beautiful, perfect, total disaster, fake, nasty, very unfair, sad, loser, witch hunt, rigged, hoax, corrupt, radical, strong, weak, winning
+
+SELF-REFERENCE patterns:
+- Third person: "Nobody has done more than Trump", "Trump is the only one who can fix it"
+- Title reminders: "your favourite President", "the 45th and 47th President"
+- Victimhood pivot to strength: attacked → fighting back → winning
+
+STRUCTURE patterns:
+- Short punchy fragments. Sometimes just one word. "Sad!" or "True!"
+- Stream-of-consciousness pivots with no transition
+- Bold claim → fake evidence cite → enemy named → rallying cry → sign-off
+- Rhetorical questions: "Can you believe it? Can you believe what they're doing?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Return ONLY raw valid JSON — no markdown code fences, no commentary:
 
 {
   "vocabulary": <integer 0-100>,
@@ -40,7 +79,7 @@ Return ONLY raw valid JSON — no markdown code fences, no commentary, just the 
   "call_to_action": <integer 0-100>,
   "structure": <integer 0-100>,
   "overall_score": <integer 0-100, must equal the mathematical average of the 8 scores above>,
-  "feedback": "<2-3 sentences of satirical, specific feedback — what landed and what missed>",
+  "feedback": "<2-3 sentences of satirical, specific feedback — what landed and what missed. Call out specific phrases that were or weren't Trumpian>",
   "breaking_news": {
     "headline": "<ALL CAPS cable news headline treating the post as a real-world event that just happened>",
     "body": "<2-3 sentences of breathless cable news anchor copy, treating the post content as breaking reality>",
@@ -54,25 +93,29 @@ Return ONLY raw valid JSON — no markdown code fences, no commentary, just the 
 }
 
 Scoring criteria:
-- vocabulary: Trumpian superlatives (BEST/GREATEST/TOTAL DISASTER), simple repetitive words, "beautiful"/"tremendous"/"horrible"/"fake"/"very very"
-- capitalization: ALL CAPS for random emphasis, unusual noun capitalization
-- punctuation: excessive !!!, ellipsis abuse..., run-on sentences, missing commas
-- self_reference: frequency of I/me/my/Trump, first-person boasting, references to personal greatness
-- enemy_framing: clear enemies, losers, haters, "radical left", "crooked", "sleepy", "failing"
-- grievance_tone: victimhood, "rigged", "witch hunt", "they're coming after me", unfair treatment
-- call_to_action: MAGA rallying cries, "Vote!", patriotic appeals, "we will WIN!"
-- structure: short punchy sentence fragments. Stream of consciousness. Abrupt topic shifts. Trademark sign-off flair.
+- vocabulary: Trumpian superlatives, simple repetitive words, core Trumpisms from the style guide above
+- capitalization: ALL CAPS bursts, proper-noun capitalisation of concepts, title self-references
+- punctuation: "...", "!!!", em-dashes, run-ons — reward all of these
+- self_reference: I/me/my/Trump, third-person self-reference, title reminders, victimhood-to-strength arc
+- enemy_framing: named enemies, "radical left", "crooked", "sleepy", "failing", "loser", "nasty"
+- grievance_tone: "rigged", "witch hunt", "very unfair", "they're coming after me", victimhood
+- call_to_action: MAGA cries, "Vote!", "SAVE AMERICA", "we will WIN!", patriotic appeals
+- structure: fragments, pivots, rhetorical questions, sign-offs (especially "President DJT") — reward heavily
 
-Use the reference posts to calibrate what a REAL Trump post scores like — a perfect 100 should match his authentic style closely. Be precise and reward genuine Trump-like patterns.
+A post ending with "President DJT" is a STRONG structure signal and should score 80+ on structure alone.
 overall_score MUST equal the exact integer average of all 8 dimension scores.
-This is for satire and comedy. Be funny and absurd. Stay in character as an over-the-top cable news universe.`;
+This is for satire and comedy. Be funny and specific in feedback. Stay in the cable news universe for breaking_news.`;
 
-function buildSystemPrompt(examplePosts) {
-  if (!examplePosts.length) return BASE_SYSTEM_PROMPT;
-  const block = examplePosts
-    .map((p, i) => `${i + 1}. "${p.text}"`)
-    .join('\n');
-  return `${BASE_SYSTEM_PROMPT}\n\nREFERENCE POSTS (calibrate your scoring against these real examples):\n${block}`;
+function buildSystemPrompt(signaturePosts, topicPosts) {
+  const sigBlock = signaturePosts.length
+    ? '\n\nSIGNATURE POSTS (always-relevant style anchors — study these carefully):\n' +
+      signaturePosts.map((p, i) => `${i + 1}. "${p.text}"`).join('\n')
+    : '';
+  const topBlock = topicPosts.length
+    ? '\n\nTOPIC POSTS (matched to the submission topic):\n' +
+      topicPosts.map((p, i) => `${i + 1}. "${p.text}"`).join('\n')
+    : '';
+  return BASE_SYSTEM_PROMPT + sigBlock + topBlock;
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -99,8 +142,9 @@ app.post('/api/score', async (req, res) => {
     return res.json({ cheater: true, message: msg });
   }
 
-  const examples     = db.getRelevantPosts(postText, 15);
-  const systemPrompt = buildSystemPrompt(examples);
+  const signaturePosts = db.getSignaturePosts();
+  const topicPosts     = db.getRelevantPosts(postText, 12);
+  const systemPrompt   = buildSystemPrompt(signaturePosts, topicPosts);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {

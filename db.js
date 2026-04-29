@@ -54,6 +54,35 @@ function extractKeywords(text) {
   )].slice(0, 8);
 }
 
+// Returns a small curated set of posts that anchor the judge to Trump's signature traits.
+// These are always included in the prompt regardless of the submission topic.
+function getSignaturePosts() {
+  const queries = [
+    // Sign-off: "President DJT"
+    `SELECT text FROM posts WHERE text LIKE '%President DJT%' ORDER BY RANDOM() LIMIT 3`,
+    // Sign-off: title variants
+    `SELECT text FROM posts WHERE text LIKE '%45th President%' OR text LIKE '%47th President%' ORDER BY RANDOM() LIMIT 2`,
+    // Ellipsis + exclamation heavy
+    `SELECT text FROM posts WHERE text LIKE '%...%' AND text LIKE '%!!!%' ORDER BY RANDOM() LIMIT 2`,
+    // Third-person self-reference
+    `SELECT text FROM posts WHERE (text LIKE '%President Trump%' OR text LIKE '%Donald Trump%') AND length(text) > 100 ORDER BY RANDOM() LIMIT 2`,
+    // Stacked superlatives
+    `SELECT text FROM posts WHERE text LIKE '%GREATEST%' AND text LIKE '%EVER%' ORDER BY RANDOM() LIMIT 1`,
+  ];
+
+  const seen = new Set();
+  const results = [];
+  for (const q of queries) {
+    for (const row of db.prepare(q).all()) {
+      if (!seen.has(row.text)) {
+        seen.add(row.text);
+        results.push(row);
+      }
+    }
+  }
+  return results;
+}
+
 // Returns up to `limit` posts relevant to the given text via keyword LIKE matching,
 // with a random-sample fallback.
 function getRelevantPosts(postText, limit = 15) {
@@ -135,4 +164,4 @@ function getStats() {
   };
 }
 
-module.exports = { getRelevantPosts, findDuplicate, addPost, getAllPosts, getStats };
+module.exports = { getSignaturePosts, getRelevantPosts, findDuplicate, addPost, getAllPosts, getStats };
