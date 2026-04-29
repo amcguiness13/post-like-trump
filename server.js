@@ -112,6 +112,11 @@ Return ONLY raw valid JSON — no markdown code fences, no commentary:
   "structure": <integer 0-100>,
   "overall_score": <integer 0-100, must equal the mathematical average of the 8 scores above>,
   "feedback": "<2-3 sentences of satirical, specific feedback — what landed and what missed. Call out specific phrases that were or weren't Trumpian>",
+  "suggestions": [
+    "<specific, actionable tip targeting the weakest dimension — name an exact phrase or pattern to add or change>",
+    "<tip 2 targeting the second weakest dimension>",
+    "<tip 3 targeting the third weakest dimension>"
+  ],
   "breaking_news": {
     "headline": "<ALL CAPS cable news headline treating the post as a real-world event that just happened>",
     "body": "<2-3 sentences of breathless cable news anchor copy, treating the post content as breaking reality>",
@@ -133,6 +138,7 @@ Scoring criteria:
 - grievance_tone: "rigged", "witch hunt", "very unfair", "they're coming after me", victimhood
 - call_to_action: MAGA cries, "Vote!", "SAVE AMERICA", "we will WIN!", patriotic appeals
 - structure: fragments, pivots, rhetorical questions, sign-offs (especially "President DJT") — reward heavily
+- suggestions: 3 tips targeting the 3 lowest-scoring dimensions. Each tip MUST name an exact phrase or pattern to add (e.g. 'End with "President DJT"', 'Open with "WOW —"', 'Call them "Crooked [Name]"', 'Add "TOTAL WITCH HUNT!!!"'). Write as if Trump himself is coaching — blunt, specific, a little boastful. Never give vague advice like "be more assertive."
 
 A post ending with "President DJT" is a STRONG structure signal and should score 80+ on structure alone.
 overall_score MUST equal the exact integer average of all 8 dimension scores.
