@@ -505,32 +505,39 @@ function Header({ rating, title, newTitle }) {
   return (
     <div className="sticky top-0 z-50 px-4 py-3 border-b"
          style={{ background: '#0f0000', borderColor: '#CC0000' }}>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="hf text-2xl tracking-widest" style={{ color: '#CC0000' }}>
-            🇺🇸 POST LIKE TRUMP
-          </span>
-          <div
-            className={`ml-auto px-3 py-0.5 rounded-full border-2 text-xs font-black tracking-wide ${newTitle ? 'gold-glow' : ''}`}
-            style={{ borderColor: '#FFD700', color: '#FFD700' }}
-          >
-            {newTitle && '⭐ '}{title}
+      <div className="max-w-2xl mx-auto flex items-center gap-3">
+        {/* Left: title + rating bar */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="hf text-2xl tracking-widest" style={{ color: '#CC0000' }}>
+              🇺🇸 POST LIKE TRUMP
+            </span>
+            <div
+              className={`ml-auto px-3 py-0.5 rounded-full border-2 text-xs font-black tracking-wide ${newTitle ? 'gold-glow' : ''}`}
+              style={{ borderColor: '#FFD700', color: '#FFD700' }}
+            >
+              {newTitle && '⭐ '}{title}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600 shrink-0 font-bold tracking-widest">TRUMP RATING</span>
+            <div className="flex-1 rounded-full overflow-hidden" style={{ background: '#2d0000', height: 10 }}>
+              <div style={{
+                width:      `${Math.min(rating, 100)}%`,
+                height:     10,
+                background: rating >= 80
+                  ? 'linear-gradient(90deg,#CC0000,#FFD700)'
+                  : 'linear-gradient(90deg,#8B0000,#CC0000)',
+                borderRadius: 9999,
+                transition:   'width 1.2s ease-out',
+              }} />
+            </div>
+            <span className="text-xs font-bold shrink-0" style={{ color: '#FFD700' }}>{rating}%</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600 shrink-0 font-bold tracking-widest">TRUMP RATING</span>
-          <div className="flex-1 rounded-full overflow-hidden" style={{ background: '#2d0000', height: 10 }}>
-            <div style={{
-              width:      `${Math.min(rating, 100)}%`,
-              height:     10,
-              background: rating >= 80
-                ? 'linear-gradient(90deg,#CC0000,#FFD700)'
-                : 'linear-gradient(90deg,#8B0000,#CC0000)',
-              borderRadius: 9999,
-              transition:   'width 1.2s ease-out',
-            }} />
-          </div>
-          <span className="text-xs font-bold shrink-0" style={{ color: '#FFD700' }}>{rating}%</span>
+        {/* Right: animated Trump head */}
+        <div className="shrink-0">
+          <TrumpHead score={rating} size={54} />
         </div>
       </div>
     </div>
@@ -622,9 +629,9 @@ function Composer({ topic, onSubmit }) {
 // TRUMP HEAD  (animated, grows with score)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TrumpHead({ score }) {
+function TrumpHead({ score, size: sizeProp }) {
   const tier = getTier(score);
-  const size = Math.round(60 + (score / 100) * 180); // 60px → 240px
+  const size = sizeProp ?? Math.round(60 + (score / 100) * 180); // 60px → 240px
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -661,14 +668,16 @@ function TrumpHead({ score }) {
           <path d="M 48 106 L 52 106 L 51 110 L 50 111 L 49 110 Z" fill="#880000"/>
         </svg>
       </div>
-      <div className="hf tracking-widest text-center" style={{ color: '#555', fontSize: 13 }}>
-        {score >= 100 ? '🇺🇸 THE REAL DONALD 🇺🇸' :
-         score >= 81  ? '⭐ GENIUS LEVEL' :
-         score >= 61  ? '⚡ VERY STABLE' :
-         score >= 41  ? '🎪 RALLY READY' :
-         score >= 21  ? '🧢 MAGA CURIOUS' :
-                        '📋 INTERN'}
-      </div>
+      {!sizeProp && (
+        <div className="hf tracking-widest text-center" style={{ color: '#555', fontSize: 13 }}>
+          {score >= 100 ? '🇺🇸 THE REAL DONALD 🇺🇸' :
+           score >= 81  ? '⭐ GENIUS LEVEL' :
+           score >= 61  ? '⚡ VERY STABLE' :
+           score >= 41  ? '🎪 RALLY READY' :
+           score >= 21  ? '🧢 MAGA CURIOUS' :
+                          '📋 INTERN'}
+        </div>
+      )}
     </div>
   );
 }
