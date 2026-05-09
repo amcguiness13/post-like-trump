@@ -902,6 +902,103 @@ function TrumpHead({ score, size: sizeProp }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SHARE PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SharePanel({ score, feedback }) {
+  const [copied, setCopied] = useState(false);
+
+  const siteUrl  = window.location.origin;
+  const title    = getTitle(score);
+  const clipped  = feedback.length > 160 ? feedback.slice(0, 157) + '…' : feedback;
+  const shareText = `I scored ${score}/100 on POST LIKE TRUMP! 🇺🇸\n\nThe AI Judge said: "${clipped}"\n\nThink you can beat ${score}? Try it yourself 👇\n${siteUrl}`;
+
+  async function handleNativeShare() {
+    try {
+      await navigator.share({ title: 'POST LIKE TRUMP', text: shareText, url: siteUrl });
+    } catch (e) { /* cancelled or unsupported */ }
+  }
+
+  function handleTwitterShare() {
+    const tweet = `I scored ${score}/100 on POST LIKE TRUMP! 🇺🇸\n\n"${clipped}"\n\nThink you can beat ${score}?`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}&url=${encodeURIComponent(siteUrl)}`,
+      '_blank', 'noopener,noreferrer'
+    );
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) { /* clipboard denied */ }
+  }
+
+  const canNativeShare = typeof navigator.share === 'function';
+
+  return (
+    <div className="rounded-xl p-4 slide-up" style={{ background: '#1a0000', border: '1px solid #2d0000' }}>
+      <div className="text-xs text-gray-600 uppercase tracking-widest mb-3 font-bold">
+        Share your result
+      </div>
+
+      {/* Score preview */}
+      <div className="rounded-lg p-3 mb-3 text-sm text-gray-400 italic leading-relaxed"
+           style={{ background: '#0f0000', border: '1px solid #1f0000' }}>
+        <span style={{ color: '#FFD700' }} className="font-bold not-italic">
+          {score}/100 — {title}
+        </span>
+        <br />
+        <span className="text-xs">"{clipped}"</span>
+      </div>
+
+      <div className="flex gap-2">
+        {canNativeShare && (
+          <button
+            onClick={handleNativeShare}
+            className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all"
+            style={{ background: '#CC0000', color: 'white', cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#aa0000'}
+            onMouseLeave={e => e.currentTarget.style.background = '#CC0000'}
+          >
+            SHARE
+          </button>
+        )}
+
+        <button
+          onClick={handleTwitterShare}
+          className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all flex items-center justify-center gap-1.5"
+          style={{ background: '#000', color: 'white', cursor: 'pointer', border: '1px solid #333' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#111'}
+          onMouseLeave={e => e.currentTarget.style.background = '#000'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.845L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          POST
+        </button>
+
+        <button
+          onClick={handleCopy}
+          className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all"
+          style={{
+            background: copied ? '#166534' : 'transparent',
+            color: copied ? '#86efac' : '#666',
+            cursor: 'pointer',
+            border: `1px solid ${copied ? '#166534' : '#2d0000'}`,
+          }}
+          onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#999'; }}}
+          onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = '#2d0000'; e.currentTarget.style.color = '#666'; }}}
+        >
+          {copied ? '✓ COPIED' : 'COPY'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SCORE BOOSTER  (unlocks at 60+)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1017,6 +1114,9 @@ function Results({ result, topic, post, personalBest, isNewRecord, onNext }) {
         <p className="text-sm text-gray-400 italic leading-relaxed">"{post}"</p>
       </div>
 
+      {/* Share */}
+      <SharePanel score={result.overall_score} feedback={result.feedback} />
+
       <button
         onClick={onNext}
         className="w-full py-4 rounded-2xl hf text-3xl tracking-widest transition-all bounce-in"
@@ -1024,9 +1124,6 @@ function Results({ result, topic, post, personalBest, isNewRecord, onNext }) {
       >
         POST AGAIN! 🇺🇸
       </button>
-
-      {/* TODO: Leaderboard (requires backend) */}
-      {/* TODO: Share post + score to social media */}
     </div>
   );
 }
