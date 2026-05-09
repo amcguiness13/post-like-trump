@@ -1195,19 +1195,16 @@ function App() {
   const cumRating    = calcCumulative(gs.scores);
   const currentTitle = getTitle(cumRating);
 
-  // Cheat code: type "MAGA" anywhere to skip to 100%
+  // Cheat code: ArrowUp ArrowUp ArrowDown ArrowDown ArrowLeft ArrowRight (Konami-style)
   useEffect(() => {
-    const seq = ['m','a','g','a'];
+    const seq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight'];
     let pos = 0;
     function onKey(e) {
-      if (e.key.toLowerCase() === seq[pos]) {
+      if (e.key === seq[pos]) {
         pos++;
-        if (pos === seq.length) {
-          pos = 0;
-          activateCheatCode();
-        }
+        if (pos === seq.length) { pos = 0; activateCheatCode(); }
       } else {
-        pos = e.key.toLowerCase() === seq[0] ? 1 : 0;
+        pos = e.key === seq[0] ? 1 : 0;
       }
     }
     window.addEventListener('keydown', onKey);
