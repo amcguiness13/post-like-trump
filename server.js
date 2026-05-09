@@ -2,16 +2,21 @@
 
 require('dotenv').config({ override: true });
 
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const db      = require('./db');
+const express      = require('express');
+const cors         = require('cors');
+const path         = require('path');
+const db           = require('./db');
+const leaderboard  = require('./db-leaderboard');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('ERROR: ANTHROPIC_API_KEY is not set. Create a .env file with your key.');
+  process.exit(1);
+}
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  console.error('ERROR: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set.');
   process.exit(1);
 }
 
@@ -222,18 +227,22 @@ app.post('/api/score', async (req, res) => {
 });
 
 // Leaderboard
-app.get('/api/leaderboard', (_req, res) => {
-  res.json(db.getLeaderboard());
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    res.json(await leaderboard.getLeaderboard());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/leaderboard', (req, res) => {
+app.post('/api/leaderboard', async (req, res) => {
   const { name, score, post_text, topic } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   if (typeof score !== 'number' || score < 0 || score > 100) return res.status(400).json({ error: 'invalid score' });
   if (!post_text?.trim()) return res.status(400).json({ error: 'post_text is required' });
   try {
-    const result = db.addLeaderboardEntry(name.trim().slice(0, 30), score, post_text.trim(), topic);
-    res.json({ success: true, id: result.lastInsertRowid });
+    await leaderboard.addLeaderboardEntry(name.trim().slice(0, 30), score, post_text.trim(), topic);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -265,8 +274,9 @@ app.post('/api/posts', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   const stats = db.getStats();
+  await leaderboard.initLeaderboard();
   console.log(`\n🇺🇸  POST LIKE TRUMP server running → http://localhost:${PORT}`);
   console.log(`   Trump posts in knowledge base: ${stats.total_posts}`);
   console.log(`   Press Ctrl+C to stop\n`);
