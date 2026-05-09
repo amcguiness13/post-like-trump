@@ -501,7 +501,7 @@ function BreakingNews({ outcome, tier }) {
 // HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Header({ rating, title, newTitle }) {
+function Header({ rating, title, newTitle, onShowLeaderboard }) {
   return (
     <div className="sticky top-0 z-50 px-4 py-3 border-b"
          style={{ background: '#0f0000', borderColor: '#CC0000' }}>
@@ -513,11 +513,20 @@ function Header({ rating, title, newTitle }) {
               POST LIKE TRUMP
             </span>
             <div
-              className={`ml-auto px-3 py-0.5 rounded-full border-2 text-xs font-black tracking-wide ${newTitle ? 'gold-glow' : ''}`}
+              className={`px-3 py-0.5 rounded-full border-2 text-xs font-black tracking-wide ${newTitle ? 'gold-glow' : ''}`}
               style={{ borderColor: '#FFD700', color: '#FFD700' }}
             >
               {newTitle && '⭐ '}{title}
             </div>
+            <button
+              onClick={onShowLeaderboard}
+              className="ml-auto hf text-sm tracking-widest px-2.5 py-0.5 rounded-full transition-all"
+              style={{ border: '1px solid #78350f', color: '#92400e', cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#78350f'; e.currentTarget.style.color = '#92400e'; }}
+            >
+              🏆 TOP 10
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-600 shrink-0 font-bold tracking-widest">TRUMP RATING</span>
@@ -544,6 +553,188 @@ function Header({ rating, title, newTitle }) {
   );
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEADERBOARD MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RANK_STYLES = [
+  { bg: 'linear-gradient(90deg,#92400e,#78350f)', medal: '🥇', color: '#FFD700' },
+  { bg: 'linear-gradient(90deg,#374151,#1f2937)', medal: '🥈', color: '#D1D5DB' },
+  { bg: 'linear-gradient(90deg,#7c2d12,#6b2209)', medal: '🥉', color: '#fb923c' },
+];
+
+function LeaderboardModal({ onClose }) {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/leaderboard')
+      .then(r => r.json())
+      .then(data => { setEntries(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  function timeAgo(str) {
+    if (!str) return '';
+    const diff = Date.now() - new Date(str + 'Z').getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins  < 1)   return 'just now';
+    if (mins  < 60)  return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    return `${days}d ago`;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{ background: 'rgba(0,0,0,0.88)' }}
+         onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+           style={{ background: '#1a0000', border: '3px solid #FFD700', maxHeight: '90vh' }}
+           onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="px-5 py-4 flex items-center justify-between shrink-0"
+             style={{ background: 'linear-gradient(90deg,#78350f,#92400e)', borderBottom: '2px solid #FFD700' }}>
+          <div>
+            <span className="hf text-3xl tracking-widest" style={{ color: '#FFD700' }}>
+              🏆 LEADERBOARD
+            </span>
+            <div className="text-xs mt-0.5" style={{ color: '#fbbf24' }}>Top 10 highest scoring posts — EVER</div>
+          </div>
+          <button onClick={onClose}
+                  className="text-gray-400 hover:text-white text-2xl leading-none font-bold"
+                  style={{ cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {/* Entries */}
+        <div className="overflow-y-auto flex-1 p-3 space-y-2">
+          {loading && (
+            <div className="flex justify-center py-8 gap-2">
+              {[0,1,2].map(i => (
+                <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+                     style={{ background: '#FFD700', animationDelay: `${i*0.15}s` }} />
+              ))}
+            </div>
+          )}
+
+          {!loading && entries.length === 0 && (
+            <div className="text-center py-10 space-y-2">
+              <div className="text-4xl">🎯</div>
+              <div className="hf text-xl tracking-widest" style={{ color: '#555' }}>NO ENTRIES YET</div>
+              <div className="text-xs text-gray-600">Be the first to claim the top spot!</div>
+            </div>
+          )}
+
+          {entries.map((e, i) => {
+            const style = RANK_STYLES[i] || null;
+            return (
+              <div key={e.id} className="rounded-xl overflow-hidden"
+                   style={{ background: style ? style.bg : '#0f0000', border: `1px solid ${style ? style.color : '#2d0000'}` }}>
+                <div className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="shrink-0 text-center" style={{ minWidth: 36 }}>
+                    {style
+                      ? <span className="text-2xl">{style.medal}</span>
+                      : <span className="hf text-xl" style={{ color: '#444' }}>#{i + 1}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm text-white truncate">{e.name}</span>
+                      {e.topic && (
+                        <span className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                              style={{ background: '#2d0000', color: '#666' }}>
+                          {e.topic}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5 truncate" style={{ color: style ? '#e5e7eb' : '#555' }}>
+                      "{e.post_text}"
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="hf text-2xl leading-none" style={{ color: style ? style.color : '#CC0000' }}>
+                      {e.score}
+                    </div>
+                    <div className="text-xs" style={{ color: '#555' }}>{timeAgo(e.created_at)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NAME PROMPT  (shown when user qualifies for leaderboard)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function NamePrompt({ score, postText, topic, onSubmit, onSkip }) {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await fetch('/api/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), score, post_text: postText, topic }),
+      });
+      onSubmit(name.trim());
+    } catch (e) {
+      onSubmit(name.trim());
+    }
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden slide-up"
+         style={{ border: '2px solid #FFD700', background: '#1a0000' }}>
+      <div className="px-4 py-3 flex items-center gap-2"
+           style={{ background: 'linear-gradient(90deg,#78350f,#92400e)' }}>
+        <span className="hf text-xl tracking-widest" style={{ color: '#FFD700' }}>
+          🏆 YOU'RE IN THE TOP 10!
+        </span>
+      </div>
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-gray-400">
+          Your score of <span className="font-black text-white">{score}/100</span> qualifies for the leaderboard.
+          Enter your name to claim your spot!
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={e => setName(e.target.value.slice(0, 30))}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="Your name…"
+            className="flex-1 px-3 py-2 rounded-lg text-sm font-bold text-gray-900 outline-none"
+            style={{ background: 'white' }}
+            autoFocus
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={!name.trim() || saving}
+            className="hf text-lg tracking-widest px-4 py-2 rounded-lg"
+            style={{ background: name.trim() && !saving ? '#FFD700' : '#555', color: '#0f0000', cursor: name.trim() && !saving ? 'pointer' : 'not-allowed' }}
+          >
+            {saving ? '…' : 'CLAIM'}
+          </button>
+        </div>
+        <button onClick={onSkip} className="text-xs w-full text-center transition-colors"
+                style={{ color: '#333', cursor: 'pointer' }}
+                onMouseEnter={e => e.target.style.color = '#666'}
+                onMouseLeave={e => e.target.style.color = '#333'}>
+          Skip — I prefer to remain anonymous
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRUMP POSTS MODAL
@@ -1040,7 +1231,7 @@ function ScoreBooster({ suggestions, score }) {
 // RESULTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Results({ result, topic, post, personalBest, isNewRecord, onNext }) {
+function Results({ result, topic, post, personalBest, isNewRecord, onNext, leaderboardQualifies, leaderboardSubmitted, onLeaderboardSubmit, onLeaderboardSkip }) {
   const tier = getTier(result.overall_score);
 
   useEffect(() => {
@@ -1113,6 +1304,25 @@ function Results({ result, topic, post, personalBest, isNewRecord, onNext }) {
         </div>
         <p className="text-sm text-gray-400 italic leading-relaxed">"{post}"</p>
       </div>
+
+      {/* Leaderboard name prompt */}
+      {leaderboardQualifies && !leaderboardSubmitted && (
+        <NamePrompt
+          score={result.overall_score}
+          postText={post}
+          topic={topic}
+          onSubmit={onLeaderboardSubmit}
+          onSkip={onLeaderboardSkip}
+        />
+      )}
+      {leaderboardSubmitted && leaderboardQualifies && (
+        <div className="rounded-xl px-4 py-3 text-center slide-up"
+             style={{ background: '#0f0000', border: '1px solid #166534' }}>
+          <span className="text-sm font-bold" style={{ color: '#86efac' }}>
+            🏆 You're on the leaderboard!
+          </span>
+        </div>
+      )}
 
       {/* Share */}
       <SharePanel score={result.overall_score} feedback={result.feedback} />
@@ -1287,6 +1497,9 @@ function App() {
   const [gs,       setGs]       = useState(loadState);  // { scores, personalBest }
   const [newTitle, setNewTitle] = useState(false);
   const [newRecord,setNewRecord]= useState(false);
+  const [showLeaderboard,    setShowLeaderboard]    = useState(false);
+  const [leaderboardQualifies, setLeaderboardQualifies] = useState(false);
+  const [leaderboardSubmitted, setLeaderboardSubmitted] = useState(false);
   const prevTitleRef = useRef(getTitle(calcCumulative(loadState().scores)));
 
   const cumRating    = calcCumulative(gs.scores);
@@ -1380,6 +1593,17 @@ function App() {
     }
 
     setResult(parsed);
+    setLeaderboardSubmitted(false);
+
+    // Check if score qualifies for top 10
+    try {
+      const lb = await fetch('/api/leaderboard').then(r => r.json());
+      const qualifies = lb.length < 10 || parsed.overall_score > lb[lb.length - 1].score;
+      setLeaderboardQualifies(qualifies);
+    } catch (e) {
+      setLeaderboardQualifies(false);
+    }
+
     setPhase(parsed.overall_score === 100 ? 'perfect' : 'results');
   }
 
@@ -1389,12 +1613,17 @@ function App() {
     setNewRecord(false);
     setError(null);
     setCheaterMsg('');
+    setLeaderboardQualifies(false);
+    setLeaderboardSubmitted(false);
     setPhase('compose');
   }
 
   return (
     <div className="min-h-screen" style={{ background: '#0f0000' }}>
-      <Header rating={cumRating} title={currentTitle} newTitle={newTitle} />
+      {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+
+      <Header rating={cumRating} title={currentTitle} newTitle={newTitle}
+              onShowLeaderboard={() => setShowLeaderboard(true)} />
 
       {error && (
         <div className="max-w-2xl mx-auto px-4 py-3">
@@ -1433,6 +1662,10 @@ function App() {
           personalBest={gs.personalBest}
           isNewRecord={newRecord}
           onNext={handleNext}
+          leaderboardQualifies={leaderboardQualifies}
+          leaderboardSubmitted={leaderboardSubmitted}
+          onLeaderboardSubmit={name => setLeaderboardSubmitted(true)}
+          onLeaderboardSkip={() => setLeaderboardSubmitted(true)}
         />
       )}
 

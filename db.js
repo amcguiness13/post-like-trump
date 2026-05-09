@@ -16,6 +16,17 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS leaderboard (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT    NOT NULL,
+    score      INTEGER NOT NULL,
+    post_text  TEXT    NOT NULL,
+    topic      TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // Seed the database on first run
 const rowCount = db.prepare('SELECT COUNT(*) AS n FROM posts').get().n;
 if (rowCount === 0) {
@@ -164,4 +175,19 @@ function getStats() {
   };
 }
 
-module.exports = { getSignaturePosts, getRelevantPosts, findDuplicate, addPost, getAllPosts, getStats };
+function getLeaderboard() {
+  return db.prepare(`
+    SELECT id, name, score, post_text, topic, created_at
+    FROM leaderboard
+    ORDER BY score DESC, created_at ASC
+    LIMIT 10
+  `).all();
+}
+
+function addLeaderboardEntry(name, score, postText, topic) {
+  return db.prepare(
+    'INSERT INTO leaderboard (name, score, post_text, topic) VALUES (?, ?, ?, ?)'
+  ).run(name, score, postText, topic || null);
+}
+
+module.exports = { getSignaturePosts, getRelevantPosts, findDuplicate, addPost, getAllPosts, getStats, getLeaderboard, addLeaderboardEntry };
