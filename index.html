@@ -555,6 +555,73 @@ function Header({ rating, title, newTitle, onShowLeaderboard }) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LEADERBOARD ENTRY POPUP  (shown after user submits their name)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function LeaderboardEntryPopup({ rank, name, score, postText, onClose, onViewLeaderboard }) {
+  const rankStyle = RANK_STYLES[rank - 1] || null;
+  const medal     = rankStyle ? rankStyle.medal : null;
+  const rankColor = rankStyle ? rankStyle.color : '#CC0000';
+
+  const rankLabel = rank === 1 ? '1ST' : rank === 2 ? '2ND' : rank === 3 ? '3RD' : `${rank}TH`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{ background: 'rgba(0,0,0,0.92)' }}
+         onClick={onClose}>
+      <div className="w-full max-w-sm bounce-in"
+           onClick={e => e.stopPropagation()}>
+
+        {/* Rank badge */}
+        <div className="text-center mb-4">
+          {medal && <div style={{ fontSize: 72, lineHeight: 1 }}>{medal}</div>}
+          <div className="hf tracking-widest mt-2" style={{ fontSize: 56, color: rankColor, lineHeight: 1 }}>
+            #{rankLabel}
+          </div>
+          <div className="hf text-2xl tracking-widest mt-1" style={{ color: '#fff' }}>
+            ON THE LEADERBOARD!
+          </div>
+        </div>
+
+        {/* Entry card */}
+        <div className="rounded-2xl overflow-hidden mb-4"
+             style={{ background: rankStyle ? rankStyle.bg : '#1a0000', border: `2px solid ${rankColor}` }}>
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-black text-white text-lg">{name}</span>
+              <span className="hf text-3xl" style={{ color: rankColor }}>{score}</span>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: rankStyle ? '#e5e7eb' : '#aaa' }}>
+              "{postText.length > 120 ? postText.slice(0, 117) + '…' : postText}"
+            </p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2">
+          <button
+            onClick={onViewLeaderboard}
+            className="w-full py-3 rounded-xl hf text-xl tracking-widest"
+            style={{ background: rankColor, color: rank <= 3 ? '#000' : '#fff', cursor: 'pointer' }}
+          >
+            VIEW FULL LEADERBOARD
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-xl text-sm transition-colors"
+            style={{ color: '#444', cursor: 'pointer' }}
+            onMouseEnter={e => e.target.style.color = '#888'}
+            onMouseLeave={e => e.target.style.color = '#444'}
+          >
+            Continue to results
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // LEADERBOARD MODAL
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1557,6 +1624,7 @@ function App() {
   const [showLeaderboard,    setShowLeaderboard]    = useState(false);
   const [leaderboardQualifies, setLeaderboardQualifies] = useState(false);
   const [leaderboardSubmitted, setLeaderboardSubmitted] = useState(false);
+  const [entryPopup,           setEntryPopup]           = useState(null); // { rank, name, score, postText }
   const prevTitleRef = useRef(getTitle(calcCumulative(loadState().scores)));
 
   const cumRating    = calcCumulative(gs.scores);
@@ -1672,12 +1740,24 @@ function App() {
     setCheaterMsg('');
     setLeaderboardQualifies(false);
     setLeaderboardSubmitted(false);
+    setEntryPopup(null);
     setPhase('compose');
   }
 
   return (
     <div className="min-h-screen" style={{ background: '#0f0000' }}>
       {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
+
+      {entryPopup && (
+        <LeaderboardEntryPopup
+          rank={entryPopup.rank}
+          name={entryPopup.name}
+          score={entryPopup.score}
+          postText={entryPopup.postText}
+          onClose={() => setEntryPopup(null)}
+          onViewLeaderboard={() => { setEntryPopup(null); setShowLeaderboard(true); }}
+        />
+      )}
 
       <Header rating={cumRating} title={currentTitle} newTitle={newTitle}
               onShowLeaderboard={() => setShowLeaderboard(true)} />
@@ -1721,7 +1801,14 @@ function App() {
           onNext={handleNext}
           leaderboardQualifies={leaderboardQualifies}
           leaderboardSubmitted={leaderboardSubmitted}
-          onLeaderboardSubmit={name => setLeaderboardSubmitted(true)}
+          onLeaderboardSubmit={async (name) => {
+            setLeaderboardSubmitted(true);
+            try {
+              const lb   = await fetch('/api/leaderboard').then(r => r.json());
+              const rank = lb.findIndex(e => e.name === name && e.score === result.overall_score) + 1;
+              if (rank > 0) setEntryPopup({ rank, name, score: result.overall_score, postText: post });
+            } catch (e) { /* silent */ }
+          }}
           onLeaderboardSkip={() => setLeaderboardSubmitted(true)}
         />
       )}
