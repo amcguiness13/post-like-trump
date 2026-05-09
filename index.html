@@ -1118,17 +1118,18 @@ function TrumpHead({ score, size: sizeProp }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SharePanel({ score, feedback }) {
-  const [copied, setCopied] = useState(false);
+  const [copied,   setCopied]   = useState(false);
+  const [igCopied, setIgCopied] = useState(false);
 
-  const siteUrl  = window.location.origin;
-  const title    = getTitle(score);
-  const clipped  = feedback.length > 160 ? feedback.slice(0, 157) + '…' : feedback;
+  const siteUrl   = window.location.origin;
+  const title     = getTitle(score);
+  const clipped   = feedback.length > 160 ? feedback.slice(0, 157) + '…' : feedback;
   const shareText = `I scored ${score}/100 on POST LIKE TRUMP! 🇺🇸\n\nThe AI Judge said: "${clipped}"\n\nThink you can beat ${score}? Try it yourself 👇\n${siteUrl}`;
+  const igText    = `I scored ${score}/100 on POST LIKE TRUMP! 🇺🇸\n\nThe AI Judge said: "${clipped}"\n\nThink you can beat ${score}? Try it: ${siteUrl}`;
 
   async function handleNativeShare() {
-    try {
-      await navigator.share({ title: 'POST LIKE TRUMP', text: shareText, url: siteUrl });
-    } catch (e) { /* cancelled or unsupported */ }
+    try { await navigator.share({ title: 'POST LIKE TRUMP', text: shareText, url: siteUrl }); }
+    catch (e) { /* cancelled or unsupported */ }
   }
 
   function handleTwitterShare() {
@@ -1139,12 +1140,21 @@ function SharePanel({ score, feedback }) {
     );
   }
 
+  function handleFacebookShare() {
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(siteUrl)}&quote=${encodeURIComponent(`I scored ${score}/100 on POST LIKE TRUMP! "${clipped}"`)}`,
+      '_blank', 'noopener,noreferrer,width=600,height=500'
+    );
+  }
+
   async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (e) { /* clipboard denied */ }
+    try { await navigator.clipboard.writeText(shareText); setCopied(true); setTimeout(() => setCopied(false), 2500); }
+    catch (e) { /* clipboard denied */ }
+  }
+
+  async function handleInstagramCopy() {
+    try { await navigator.clipboard.writeText(igText); setIgCopied(true); setTimeout(() => setIgCopied(false), 2500); }
+    catch (e) { /* clipboard denied */ }
   }
 
   const canNativeShare = typeof navigator.share === 'function';
@@ -1158,54 +1168,80 @@ function SharePanel({ score, feedback }) {
       {/* Score preview */}
       <div className="rounded-lg p-3 mb-3 text-sm text-gray-400 italic leading-relaxed"
            style={{ background: '#0f0000', border: '1px solid #1f0000' }}>
-        <span style={{ color: '#FFD700' }} className="font-bold not-italic">
-          {score}/100 — {title}
-        </span>
+        <span style={{ color: '#FFD700' }} className="font-bold not-italic">{score}/100 — {title}</span>
         <br />
         <span className="text-xs">"{clipped}"</span>
       </div>
 
-      <div className="flex gap-2">
-        {canNativeShare && (
-          <button
-            onClick={handleNativeShare}
-            className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all"
-            style={{ background: '#CC0000', color: 'white', cursor: 'pointer' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#aa0000'}
-            onMouseLeave={e => e.currentTarget.style.background = '#CC0000'}
-          >
-            SHARE
-          </button>
-        )}
+      {/* Native share — mobile only, full width */}
+      {canNativeShare && (
+        <button onClick={handleNativeShare}
+                className="w-full mb-2 py-2.5 rounded-lg hf text-lg tracking-widest transition-all"
+                style={{ background: '#CC0000', color: 'white', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#aa0000'}
+                onMouseLeave={e => e.currentTarget.style.background = '#CC0000'}>
+          SHARE
+        </button>
+      )}
 
-        <button
-          onClick={handleTwitterShare}
-          className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all flex items-center justify-center gap-1.5"
-          style={{ background: '#000', color: 'white', cursor: 'pointer', border: '1px solid #333' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#111'}
-          onMouseLeave={e => e.currentTarget.style.background = '#000'}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+      {/* Platform buttons — 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* X / Twitter */}
+        <button onClick={handleTwitterShare}
+                className="py-2.5 rounded-lg hf text-base tracking-widest transition-all flex items-center justify-center gap-1.5"
+                style={{ background: '#000', color: 'white', cursor: 'pointer', border: '1px solid #333' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#111'}
+                onMouseLeave={e => e.currentTarget.style.background = '#000'}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.845L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
-          POST
+          POST TO X
         </button>
 
-        <button
-          onClick={handleCopy}
-          className="flex-1 py-2.5 rounded-lg hf text-lg tracking-widest transition-all"
-          style={{
-            background: copied ? '#166534' : 'transparent',
-            color: copied ? '#86efac' : '#666',
-            cursor: 'pointer',
-            border: `1px solid ${copied ? '#166534' : '#2d0000'}`,
-          }}
-          onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#999'; }}}
-          onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = '#2d0000'; e.currentTarget.style.color = '#666'; }}}
-        >
-          {copied ? '✓ COPIED' : 'COPY'}
+        {/* Facebook */}
+        <button onClick={handleFacebookShare}
+                className="py-2.5 rounded-lg hf text-base tracking-widest transition-all flex items-center justify-center gap-1.5"
+                style={{ background: '#1877F2', color: 'white', cursor: 'pointer', border: '1px solid #1877F2' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#1464d8'}
+                onMouseLeave={e => e.currentTarget.style.background = '#1877F2'}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          FACEBOOK
+        </button>
+
+        {/* Copy */}
+        <button onClick={handleCopy}
+                className="py-2.5 rounded-lg hf text-base tracking-widest transition-all"
+                style={{ background: copied ? '#166534' : 'transparent', color: copied ? '#86efac' : '#666', cursor: 'pointer', border: `1px solid ${copied ? '#166534' : '#2d0000'}` }}
+                onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#999'; }}}
+                onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = '#2d0000'; e.currentTarget.style.color = '#666'; }}}>
+          {copied ? '✓ COPIED' : 'COPY LINK'}
+        </button>
+
+        {/* Instagram — copy with prompt */}
+        <button onClick={handleInstagramCopy}
+                className="py-2.5 rounded-lg hf text-base tracking-widest transition-all flex items-center justify-center gap-1.5"
+                style={{ background: igCopied ? '#166534' : 'transparent', color: igCopied ? '#86efac' : '#666', cursor: 'pointer', border: `1px solid ${igCopied ? '#166534' : '#2d0000'}` }}
+                onMouseEnter={e => { if (!igCopied) { e.currentTarget.style.borderColor = '#c13584'; e.currentTarget.style.color = '#c13584'; }}}
+                onMouseLeave={e => { if (!igCopied) { e.currentTarget.style.borderColor = '#2d0000'; e.currentTarget.style.color = '#666'; }}}>
+          {igCopied
+            ? '✓ COPIED — PASTE IN INSTAGRAM'
+            : <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                </svg>
+                INSTAGRAM
+              </>
+          }
         </button>
       </div>
+
+      {igCopied && (
+        <p className="text-xs mt-2 text-center" style={{ color: '#555' }}>
+          Text copied — open Instagram and paste into a post or story
+        </p>
+      )}
     </div>
   );
 }
