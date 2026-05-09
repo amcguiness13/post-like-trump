@@ -758,11 +758,11 @@ function LeaderboardModal({ onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NAME PROMPT  (shown when user qualifies for leaderboard)
+// NAME PROMPT MODAL  (blocking overlay shown before results are visible)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function NamePrompt({ score, postText, topic, onSubmit, onSkip }) {
-  const [name, setName] = useState('');
+function NamePromptModal({ score, postText, topic, onSubmit, onSkip }) {
+  const [name,   setName]   = useState('');
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
@@ -770,55 +770,72 @@ function NamePrompt({ score, postText, topic, onSubmit, onSkip }) {
     setSaving(true);
     try {
       await fetch('/api/leaderboard', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), score, post_text: postText, topic }),
+        body:    JSON.stringify({ name: name.trim(), score, post_text: postText, topic }),
       });
-      onSubmit(name.trim());
-    } catch (e) {
-      onSubmit(name.trim());
-    }
+    } catch (e) { /* silent — still proceed */ }
+    onSubmit(name.trim());
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden slide-up"
-         style={{ border: '2px solid #FFD700', background: '#1a0000' }}>
-      <div className="px-4 py-3 flex items-center gap-2"
-           style={{ background: 'linear-gradient(90deg,#78350f,#92400e)' }}>
-        <span className="hf text-xl tracking-widest" style={{ color: '#FFD700' }}>
-          🏆 YOU'RE IN THE TOP 10!
-        </span>
-      </div>
-      <div className="p-4 space-y-3">
-        <p className="text-sm text-gray-400">
-          Your score of <span className="font-black text-white">{score}/100</span> qualifies for the leaderboard.
-          Enter your name to claim your spot!
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={name}
-            onChange={e => setName(e.target.value.slice(0, 30))}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="Your name…"
-            className="flex-1 px-3 py-2 rounded-lg text-sm font-bold text-gray-900 outline-none"
-            style={{ background: 'white' }}
-            autoFocus
-          />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{ background: 'rgba(0,0,0,0.92)' }}>
+      <div className="w-full max-w-sm bounce-in rounded-2xl overflow-hidden"
+           style={{ border: '2px solid #FFD700', background: '#1a0000' }}>
+
+        {/* Header */}
+        <div className="px-5 py-4 text-center"
+             style={{ background: 'linear-gradient(90deg,#78350f,#92400e)' }}>
+          <div style={{ fontSize: 48 }}>🏆</div>
+          <div className="hf text-3xl tracking-widest mt-1" style={{ color: '#FFD700' }}>
+            YOU'RE IN THE TOP 10!
+          </div>
+          <div className="text-sm mt-1" style={{ color: '#fbbf24' }}>
+            Score: <span className="font-black text-white">{score}/100</span>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-center" style={{ color: '#aaa' }}>
+            Enter your name to claim your spot on the leaderboard.
+          </p>
+
+          <div className="flex gap-2">
+            <input
+              value={name}
+              onChange={e => setName(e.target.value.slice(0, 30))}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              placeholder="Your name…"
+              className="flex-1 px-3 py-2.5 rounded-lg text-sm font-bold text-gray-900 outline-none"
+              style={{ background: 'white' }}
+              autoFocus
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!name.trim() || saving}
+              className="hf text-lg tracking-widest px-4 py-2 rounded-lg"
+              style={{
+                background: name.trim() && !saving ? '#FFD700' : '#555',
+                color: '#0f0000',
+                cursor: name.trim() && !saving ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {saving ? '…' : 'CLAIM'}
+            </button>
+          </div>
+
           <button
-            onClick={handleSubmit}
-            disabled={!name.trim() || saving}
-            className="hf text-lg tracking-widest px-4 py-2 rounded-lg"
-            style={{ background: name.trim() && !saving ? '#FFD700' : '#555', color: '#0f0000', cursor: name.trim() && !saving ? 'pointer' : 'not-allowed' }}
+            onClick={onSkip}
+            className="w-full py-2 text-sm text-center transition-colors rounded-lg"
+            style={{ color: '#444', cursor: 'pointer', border: '1px solid #2d0000' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#555'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#2d0000'; }}
           >
-            {saving ? '…' : 'CLAIM'}
+            Skip — post anonymously
           </button>
         </div>
-        <button onClick={onSkip} className="text-xs w-full text-center transition-colors"
-                style={{ color: '#333', cursor: 'pointer' }}
-                onMouseEnter={e => e.target.style.color = '#666'}
-                onMouseLeave={e => e.target.style.color = '#333'}>
-          Skip — I prefer to remain anonymous
-        </button>
       </div>
     </div>
   );
@@ -1355,7 +1372,7 @@ function ScoreBooster({ suggestions, score }) {
 // RESULTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Results({ result, topic, post, personalBest, isNewRecord, onNext, leaderboardQualifies, leaderboardSubmitted, onLeaderboardSubmit, onLeaderboardSkip }) {
+function Results({ result, topic, post, personalBest, isNewRecord, onNext }) {
   const tier = getTier(result.overall_score);
 
   useEffect(() => {
@@ -1428,25 +1445,6 @@ function Results({ result, topic, post, personalBest, isNewRecord, onNext, leade
         </div>
         <p className="text-sm text-gray-400 italic leading-relaxed">"{post}"</p>
       </div>
-
-      {/* Leaderboard name prompt */}
-      {leaderboardQualifies && !leaderboardSubmitted && (
-        <NamePrompt
-          score={result.overall_score}
-          postText={post}
-          topic={topic}
-          onSubmit={onLeaderboardSubmit}
-          onSkip={onLeaderboardSkip}
-        />
-      )}
-      {leaderboardSubmitted && leaderboardQualifies && (
-        <div className="rounded-xl px-4 py-3 text-center slide-up"
-             style={{ background: '#0f0000', border: '1px solid #166534' }}>
-          <span className="text-sm font-bold" style={{ color: '#86efac' }}>
-            🏆 You're on the leaderboard!
-          </span>
-        </div>
-      )}
 
       {/* Share */}
       <SharePanel score={result.overall_score} feedback={result.feedback} />
@@ -1748,6 +1746,23 @@ function App() {
     <div className="min-h-screen" style={{ background: '#0f0000' }}>
       {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
 
+      {phase === 'results' && result && leaderboardQualifies && !leaderboardSubmitted && (
+        <NamePromptModal
+          score={result.overall_score}
+          postText={post}
+          topic={topic}
+          onSubmit={async (name) => {
+            setLeaderboardSubmitted(true);
+            try {
+              const lb   = await fetch('/api/leaderboard').then(r => r.json());
+              const rank = lb.findIndex(e => e.name === name && e.score === result.overall_score) + 1;
+              if (rank > 0) setEntryPopup({ rank, name, score: result.overall_score, postText: post });
+            } catch (e) { /* silent */ }
+          }}
+          onSkip={() => setLeaderboardSubmitted(true)}
+        />
+      )}
+
       {entryPopup && (
         <LeaderboardEntryPopup
           rank={entryPopup.rank}
@@ -1799,17 +1814,6 @@ function App() {
           personalBest={gs.personalBest}
           isNewRecord={newRecord}
           onNext={handleNext}
-          leaderboardQualifies={leaderboardQualifies}
-          leaderboardSubmitted={leaderboardSubmitted}
-          onLeaderboardSubmit={async (name) => {
-            setLeaderboardSubmitted(true);
-            try {
-              const lb   = await fetch('/api/leaderboard').then(r => r.json());
-              const rank = lb.findIndex(e => e.name === name && e.score === result.overall_score) + 1;
-              if (rank > 0) setEntryPopup({ rank, name, score: result.overall_score, postText: post });
-            } catch (e) { /* silent */ }
-          }}
-          onLeaderboardSkip={() => setLeaderboardSubmitted(true)}
         />
       )}
 
