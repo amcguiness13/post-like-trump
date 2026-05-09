@@ -1195,6 +1195,53 @@ function App() {
   const cumRating    = calcCumulative(gs.scores);
   const currentTitle = getTitle(cumRating);
 
+  // Cheat code: type "MAGA" anywhere to skip to 100%
+  useEffect(() => {
+    const seq = ['m','a','g','a'];
+    let pos = 0;
+    function onKey(e) {
+      if (e.key.toLowerCase() === seq[pos]) {
+        pos++;
+        if (pos === seq.length) {
+          pos = 0;
+          activateCheatCode();
+        }
+      } else {
+        pos = e.key.toLowerCase() === seq[0] ? 1 : 0;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  function activateCheatCode() {
+    const fake = {
+      vocabulary: 100, capitalization: 100, punctuation: 100, self_reference: 100,
+      enemy_framing: 100, grievance_tone: 100, call_to_action: 100, structure: 100,
+      overall_score: 100,
+      feedback: "PERFECT. Absolutely perfect. The best post ever written by anyone, ever, in the history of posting. Many people are saying it. I'm saying it. Everybody's saying it.",
+      suggestions: [],
+      breaking_news: {
+        headline: "SOURCES CONFIRM: PERFECT TRUMP POST DETECTED — AI JUDGE WEEPS GOLDEN TEARS",
+        body: "In an unprecedented event, the POST LIKE TRUMP AI Judge has awarded a perfect score for the first time in recorded history. Scientists are baffled. Enemies are devastated. The stock market is doing tremendously.",
+        ticker: [
+          "TRUMP SCORE INDEX HITS ALL-TIME HIGH — UP 10,000%",
+          "Chuck Schumer seen crying in parking garage",
+          "UN convenes emergency session in response to post",
+          "Local man achieves perfect score, neighbours report unusual orange glow",
+        ],
+      },
+    };
+    setPost('(cheat code activated)');
+    setResult(fake);
+    const newScores = [...gs.scores, 100];
+    const newBest   = 100;
+    saveState(newScores, newBest);
+    setGs({ scores: newScores, personalBest: newBest });
+    setNewRecord(true);
+    setPhase('perfect');
+  }
+
   async function handleSubmit(postText) {
     setPost(postText);
     setError(null);
